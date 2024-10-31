@@ -1,130 +1,139 @@
-/* eslint-disable no-unused-vars */
+import axios from "axios";
 import React, { useState } from "react";
-import { Container, Row, Col, Form, Button, Alert } from "react-bootstrap"; // Import necessary Bootstrap components
+import { BASE_URL } from "../utils/Apiurl";
 import { Link, useNavigate } from "react-router-dom";
 
-const SignIn = () => {
-  const [formState, setFormState] = useState({ email: "", password: "" });
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); 
+const SignIn = ({ buttonText = "Sign In" }) => {
+  const [formState, setFormState] = useState({
+    email: "",
+    password: "",
+  });
 
-  // update state based on form input changes
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormState({
-      ...formState,
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  const navigate = useNavigate();
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormState((prevState) => ({
+      ...prevState,
       [name]: value,
-    });
+    }));
   };
 
-  // submit form
+  // Handle form submission
   const handleFormSubmit = async (event) => {
     event.preventDefault();
-    setError(null);
-    setSuccess(false);
-    setLoading(true); // Start loading state
-  
+    setError(null); // Clear any previous error
+    setSuccessMessage(null); // Clear previous success message
+    setLoading(true); // Start loading
+
     try {
-      const response = await fetch("http://localhost:3000/api/users/login", {
-        method: "POST",
+      const res = await axios.post(`${BASE_URL}users/login`, formState, {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formState),
       });
-  
-      const data = await response.json();
-      console.log(data); // Log the full response for debugging
-      setLoading(false); // End loading state
-  
-      if (!response.ok) {
-        throw new Error(data.message || "Something went wrong.");
+console.log(res)
+      setSuccessMessage("Sign in successful! Redirecting...");
+      setFormState({ email: "", password: "" }); // Reset form
+      setTimeout(() => navigate("/dashboard"), 2000); // Navigate after 2 seconds
+    } catch (error) {
+      if (error.response) {
+        setError(error.response.data.message || "An error occurred during sign in.");
+      } else {
+        setError("Network Error. Please check your connection and try again.");
       }
-  
-      // Assuming the API returns the user data correctly
-      localStorage.setItem("user", JSON.stringify(data)); // Store user info
-      // localStorage.setItem("token", data.token); // Store token
-      setSuccess(true); // Show success message
-      navigate("/dashboard");
-      console.log('User stored in localStorage:', localStorage.getItem("user"));
-    } catch (e) {
-      setLoading(false); // End loading state in case of error
-      setError(e.message); // Set error message
+    } finally {
+      setLoading(false); // Stop loading
     }
-  
-    // Clear form values
-    setFormState({
-      email: "",
-      password: "",
-    });
   };
-  
 
   return (
-    <Container fluid className="d-flex flex-column justify-content-center align-items-center min-vh-100">
-      <Row className="w-100 justify-content-center">
-        <Col xs={12} md={6} lg={4}>
-          <div className="signin-card p-4 shadow-lg rounded">
-            <h2 className="text-center mb-4">Sign In</h2>
-            {success ? (
-              <Alert variant="success" className="text-center">
-                Success! You may now head <Link to="/">back to the homepage</Link>.
-              </Alert>
-            ) : (
-              <>
-                <Form onSubmit={handleFormSubmit}>
-                  <Form.Group controlId="formBasicEmail">
-                    <Form.Label>Email Address</Form.Label>
-                    <Form.Control
-                      type="email"
-                      placeholder="Enter email"
-                      name="email"
-                      value={formState.email}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Form.Group>
+    <div className="container mt-5">
+      <div className="row justify-content-center">
+        <div className="col-md-6">
+          <div className="card shadow-sm">
+            <div className="card-body">
+              <h2 className="text-center mb-4">Sign In</h2>
 
-                  <Form.Group controlId="formBasicPassword" className="mt-3">
-                    <Form.Label>Password</Form.Label>
-                    <Form.Control
-                      type="password"
-                      placeholder="Enter password"
-                      name="password"
-                      value={formState.password}
-                      onChange={handleChange}
-                      required
-                    />
-                  </Form.Group>
+              {/* Success Message */}
+              {successMessage && (
+                <div className="alert alert-success" role="alert">
+                  {successMessage}
+                </div>
+              )}
 
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    className="w-100 mt-4"
-                    disabled={loading}
-                  >
-                    {loading ? "Signing In..." : "Sign In"}
-                  </Button>
-                </Form>
-                <p className="text-center mt-3">
-                  <small className="text-muted">
-                    Don't have an account? <Link to="/signup">Sign Up</Link>.
-                  </small>
-                </p>
-              </>
-            )}
+              {/* Error Message */}
+              {error && (
+                <div className="alert alert-danger" role="alert">
+                  {error}
+                </div>
+              )}
 
-            {error && (
-              <Alert variant="danger" className="mt-3">
-                {error}
-              </Alert>
-            )}
+              {/* Sign-In Form */}
+              <form onSubmit={handleFormSubmit}>
+                <div className="mb-3">
+                  <label htmlFor="email" className="form-label">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    id="email"
+                    name="email"
+                    value={formState.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="password" className="form-label">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    id="password"
+                    name="password"
+                    value={formState.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary w-100"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Signing In...
+                    </span>
+                  ) : (
+                    buttonText
+                  )}
+                </button>
+              </form>
+
+              <p className="text-center mt-3">
+                <small className="text-muted">
+                  Don't have an account? <Link to="/signUp">Sign Up</Link>.
+                </small>
+              </p>
+            </div>
           </div>
-        </Col>
-      </Row>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 };
 

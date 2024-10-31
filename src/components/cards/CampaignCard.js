@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Modal from 'react-modal';
+import { BASE_URL } from '../../utils/Apiurl';
 
 // Modal styles
 const modalStyles = {
@@ -16,7 +17,7 @@ const modalStyles = {
   },
 };
 
-Modal.setAppElement('#root');  // Set root for accessibility
+Modal.setAppElement('#root');
 
 const CampaignList = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -24,31 +25,24 @@ const CampaignList = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
-  // const parsedUser = JSON.parse(storedUser)
-  // console.log('User stored in localStorage:', localStorage.getItem("user"));
+
   const storedUser = localStorage.getItem("user");
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-  if (parsedUser) {
-    // console.log('User ID:', parsedUser._id);
-    // console.log('Email:', parsedUser.email);
-    // console.log('Avatar:', parsedUser.avatar);
-    // console.log('Token:', parsedUser.token);
-} else {
-    console.log('No user data found in localStorage.');
-}
+
   const [donationInfo, setDonationInfo] = useState({
     fullName: '',
     email: '',
-    userId: parsedUser._id,
+    userId: parsedUser ? parsedUser._id : '',
     donationAmount: '',
   });
 
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/campaigns/');
-        setCampaigns(response.data);
-        console.log(response.data)
+        const response = await axios.get(`${BASE_URL}campaigns/all`, {
+          headers: { "Content-Type": "application/json" },
+        });
+        setCampaigns(response.data.data);
       } catch (err) {
         setError('Error fetching campaigns');
       } finally {
@@ -59,90 +53,82 @@ const CampaignList = () => {
     fetchCampaigns();
   }, []);
 
-  // Handle input change for the donation modal
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setDonationInfo({ ...donationInfo, [name]: value });
   };
 
-  // Open the modal
   const openModal = (campaign) => {
     setSelectedCampaign(campaign);
     setIsModalOpen(true);
   };
 
-  // Close the modal
   const closeModal = () => {
     setIsModalOpen(false);
     setDonationInfo({
       fullName: '',
       email: '',
-      userId: '',
+      userId: parsedUser ? parsedUser._id : '',
       donationAmount: '',
     });
   };
 
-  // Handle donation submission
   const handleDonationSubmit = async (e) => {
-  e.preventDefault();
-  const { fullName, email, userId, donationAmount } = donationInfo;
+    e.preventDefault();
+    const { fullName, email, userId, donationAmount } = donationInfo;
 
-  // Simple validation
-  if (!fullName || !email || !userId || !donationAmount) {
-    alert('Please fill all the fields');
-    return;
-  }
+    if (!fullName || !email || !userId || !donationAmount) {
+      alert('Please fill all the fields');
+      return;
+    }
 
-  try {
-    await axios.post(`http://localhost:5000/api/campaigns/${selectedCampaign._id}/donate`, {
-      userId,
-      fullName,
-      email,
-      amount: donationAmount,
-    });
+    try {
+      await axios.post(`http://localhost:3000/api/campaigns/${selectedCampaign._id}/donate`, {
+        userId,
+        fullName,
+        email,
+        amount: donationAmount,
+      });
+      alert('Donation successful!');
+      closeModal();
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+      alert('Donation failed');
+    }
+  };
 
-    alert('Donation successful!');
-    closeModal();
-
-    // Refresh the page after successful donation
-    window.location.reload();  
-  } catch (err) {
-    console.error(err);
-    alert('Donation failed');
-  }
-};
-
-
-  if (loading) {
-    return <p>Loading...</p>;
-  }
-
-  if (error) {
-    return <p>{error}</p>;
-  }
-
-  if (!campaigns.length) {
-    return <p>No campaigns available</p>;
-  }
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>{error}</p>;
+  if (!campaigns.length) return <p>No campaigns available</p>;
 
   return (
     <div style={styles.gridContainer}>
       {campaigns.map((campaign) => {
         const progress = Math.round((campaign.donationReceived / campaign.donationGoal) * 100);
-
         const today = new Date();
         const endDate = new Date(campaign.fundRaisingEndDate);
         const daysLeft = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
 
         return (
           <div key={campaign._id} style={styles.card}>
-            <img src={campaign.urlToImage} alt={campaign.title} style={styles.image} />
+            <div style={{ width: '100%', height: '150px' }}>
+      <img
+       src={campaign.image_url} alt={campaign.title} 
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+        }}
+      />
+    </div>
+            {/* <img src={campaign.image_url} alt={campaign.title} style={styles.image} /> */}
             <div style={styles.cardContent}>
               <h3>{campaign.title}</h3>
               <p>{campaign.content}</p>
               <p>Author: {campaign.author}</p>
               <p>
-                Raised: {campaign.donationCurrency} {campaign.donationReceived.toLocaleString()} / {campaign.donationCurrency} {campaign.donationGoal.toLocaleString()}
+                Raised: ₹{campaign.donationReceived.toLocaleString()} / ₹{campaign.donationGoal.toLocaleString()}
               </p>
               <p>Progress: {progress}%</p>
               <div style={styles.progressBar}>
@@ -159,141 +145,100 @@ const CampaignList = () => {
 
       {/* Modal for donation */}
       <Modal isOpen={isModalOpen} onRequestClose={closeModal} style={modalStyles} contentLabel="Donate">
-  <h2>Donate to {selectedCampaign?.title}</h2>
-  <form onSubmit={handleDonationSubmit} style={styles.form}>
-    <div style={styles.formGroup}>
-      <label style={styles.label}>Full Name:</label>
-      <input type="text" name="fullName" value={donationInfo.fullName} onChange={handleInputChange} required style={styles.input} />
-    </div>
-    <div style={styles.formGroup}>
-      <label style={styles.label}>Email:</label>
-      <input type="email" name="email" value={donationInfo.email} onChange={handleInputChange} required style={styles.input} />
-    </div>
-    <div style={styles.formGroup}>
-      <label style={styles.label}>User ID:</label>
-      <input type="text" name="userId" value={donationInfo.userId} onChange={handleInputChange} required style={styles.input} />
-    </div>
-    <div style={styles.formGroup}>
-      <label style={styles.label}>Donation Amount (₹):</label>
-      <input type="number" name="donationAmount" value={donationInfo.donationAmount} onChange={handleInputChange} required style={styles.input} />
-    </div>
-    <button type="submit" style={styles.submitButton}>Submit Donation</button>
-    <button type="button" onClick={closeModal} style={styles.cancelButton}>Cancel</button>
-  </form>
-</Modal>
-
+        <h2>Donate to {selectedCampaign?.title}</h2>
+        <form onSubmit={handleDonationSubmit} style={styles.form}>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Full Name:</label>
+            <input type="text" name="fullName" value={donationInfo.fullName} onChange={handleInputChange} required style={styles.input} />
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Email:</label>
+            <input type="email" name="email" value={donationInfo.email} onChange={handleInputChange} required style={styles.input} />
+          </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Donation Amount (₹):</label>
+            <input type="number" name="donationAmount" value={donationInfo.donationAmount} onChange={handleInputChange} required style={styles.input} />
+          </div>
+          <button type="submit" style={styles.submitButton}>Submit Donation</button>
+          <button type="button" onClick={closeModal} style={styles.cancelButton}>Cancel</button>
+        </form>
+      </Modal>
     </div>
   );
 };
 
-// Styles
+// Styles (add your CSS-in-JS or CSS classes here)
 const styles = {
   gridContainer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '20px',
-    justifyContent: 'space-around',
-    marginTop: '65px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '16px',
+    padding: '20px',
   },
   card: {
-    width: '300px',
-    border: '1px solid #ddd',
+    border: '1px solid #ccc',
     borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden',
-    backgroundColor: '#fff',
-    transition: '0.3s',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
   },
   image: {
     width: '100%',
-    height: '180px',
-    objectFit: 'cover',
+    height: '150px',
+    objectFit: 'stretch',
+    
   },
   cardContent: {
-    padding: '15px',
+    padding: '16px',
   },
   progressBar: {
-    width: '100%',
+    background: '#f3f3f3',
+    borderRadius: '4px',
     height: '10px',
-    backgroundColor: '#e0e0e0',
-    borderRadius: '5px',
-    overflow: 'hidden',
-    margin: '10px 0',
+    margin: '8px 0',
   },
   progress: {
+    background: '#4caf50',
     height: '100%',
-    backgroundColor: '#4caf50',
-    borderRadius: '5px',
+    borderRadius: '4px',
   },
   donateLink: {
-    display: 'inline-block',
-    padding: '10px 15px',
-    marginTop: '10px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-    textDecoration: 'none',
-    borderRadius: '5px',
-    textAlign: 'center',
-  },
-  formGroup: {
-    marginBottom: '15px',
-  },
-  submitButton: {
-    backgroundColor: '#28a745',
-    color: '#fff',
-    padding: '10px',
+    background: '#4caf50',
+    color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '4px',
+    padding: '10px 20px',
     cursor: 'pointer',
-  },
-  cancelButton: {
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    padding: '10px',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginLeft: '10px',
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',  // Stack the label and input vertically
-    marginBottom: '15px',
-    textAlign: 'left',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+  },
+  formGroup: {
+    marginBottom: '10px',
   },
   label: {
-    fontWeight: 'bold',
     marginBottom: '5px',
   },
   input: {
-    padding: '8px',
-    borderRadius: '5px',
+    padding: '10px',
     border: '1px solid #ccc',
-    width: '100%',  // Make sure input fields are full width
+    borderRadius: '4px',
   },
   submitButton: {
-    backgroundColor: '#28a745',
-    color: '#fff',
-    padding: '10px',
+    background: '#4caf50',
+    color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '4px',
+    padding: '10px',
     cursor: 'pointer',
-    width: '100%',  // Full width button
   },
   cancelButton: {
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    padding: '10px',
+    background: 'red',
+    color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '4px',
+    padding: '10px',
     cursor: 'pointer',
-    width: '100%',  // Full width button
-    marginTop: '10px',
   },
 };
 

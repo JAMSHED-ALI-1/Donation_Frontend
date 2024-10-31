@@ -1,69 +1,81 @@
-import React, { useState ,useEffect} from "react";
-import { Container, Row, Col, Card, Table, ListGroup } from "react-bootstrap";
+import React, { useState, useEffect } from "react";
+import { Container, Row, Col, Card, Table } from "react-bootstrap";
 import { Bar, Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
-import SideBar from "./sideBar";
 import axios from "axios";
+import { BASE_URL } from "../utils/Apiurl";
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const DonationDashboard = () => {
-
-  const [donors, setDonors] = useState([]);
-  const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const GetDonationData = async () => {
-    const token='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2ZjVhYmRmNDkyZTQzZDZjODIzZjYxNiIsImlhdCI6MTcyNzc3NzIxMywiZXhwIjoxNzMwMzY5MjEzfQ.QprtUltZKq1-RyCFHPYoq6uKeFW-BewjA-w9_InhH70' // Update with your actual token
-    try {
-      const res = await axios.get('http://localhost:5000/api/donations/', {
-        headers: {
-          'Authorization': `Bearer ${token}`, // Authorization token
-          'Content-Type': 'application/json',
+  const [topDonor, setTopDonor] = useState(null);
+  const [totalDonations, setTotalDonations] = useState(0);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+      console.log('Parsed User object:', parsedUser.token);
+    } else {
+      console.log('No user found in localStorage');
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}campaigns/all`, {
+          headers: { "Content-Type": "application/json" },
+        });
+        const campaigns = response.data.data;
+        setDonations(campaigns);
+
+        // Calculate total donations and top donor
+        let total = 0;
+        const donorTotals = {};
+
+        campaigns.forEach((campaign) => {
+          campaign.donors.forEach((donor) => {
+            total += donor.amount;
+
+            if (donorTotals[donor.user]) {
+              donorTotals[donor.user] += donor.amount;
+            } else {
+              donorTotals[donor.user] = donor.amount;
+            }
+          });
+        });
+
+        // Set total donations state
+        setTotalDonations(total);
+
+        // Determine top donor
+        let topDonorUser = null;
+        let topDonationAmount = 0;
+
+        for (const [user, amount] of Object.entries(donorTotals)) {
+          if (amount > topDonationAmount) {
+            topDonationAmount = amount;
+            topDonorUser = user;
+          }
         }
-      });
-    //  console.log(res?.data)
-      setDonors(res?.data); // Expecting an array of donors
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch donor data');
-    }
-  };
-useEffect(()=>{
-  GetDonationData()
-},[])
 
-
-
-
-
-useEffect(() => {
-  const fetchDonations = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/campaigns/'); // Replace with your API endpoint
-      if (!response.ok) {
-        throw new Error('Failed to fetch donations');
+        setTopDonor({ user: topDonorUser, amount: topDonationAmount });
+      } catch (err) {
+        console.error("Error fetching campaigns:", err.message);
+      } finally {
+        setLoading(false);
       }
-      const data = await response.json();
-      console.log(data)
-      // Extract all donors from the response data
-      const allDonors = data.flatMap(item => item.donors);
+    };
 
-      // Sort donors by donatedAt date (most recent first)
-      const recentDonors = allDonors.sort((a, b) => new Date(b.donatedAt) - new Date(a.donatedAt));
-console.log(recentDonors)
-      // Limit to the top 4 most recent donations
-      setDonations(recentDonors.slice(0, 4));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchCampaigns();
+  }, []);
 
-  fetchDonations();
-}, []);
   // Donation Stats Data (Bar Chart)
   const donationStatsData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
@@ -78,7 +90,6 @@ console.log(recentDonors)
     ],
   };
 
-  // Options for the bar chart
   const barChartOptions = {
     responsive: true,
     plugins: {
@@ -117,7 +128,6 @@ console.log(recentDonors)
     ],
   };
 
-  // Options for the doughnut chart
   const doughnutChartOptions = {
     responsive: true,
     plugins: {
@@ -131,62 +141,34 @@ console.log(recentDonors)
     },
   };
 
-  // Recent donations data
-  const recentDonations = [
-    {
-      id: 1,
-      donor: "John Doe",
-      amount: "$500",
-      cause: "Education Fund",
-      date: "2024-03-15",
-    },
-    {
-      id: 2,
-      donor: "Jane Smith",
-      amount: "$1,000",
-      cause: "Health Initiative",
-      date: "2024-03-14",
-    },
-    {
-      id: 3,
-      donor: "Alex Johnson",
-      amount: "$750",
-      cause: "Environmental Protection",
-      date: "2024-03-13",
-    },
-  ];
-
-  // Top donors data
-  // const topDonors = [
-  //   {
-  //     name: "Emily Brown",
-  //     totalDonation: "$10,000",
-  //     lastDonation: "2024-03-10",
-  //   },
-  //   {
-  //     name: "Michael Wilson",
-  //     totalDonation: "$8,500",
-  //     lastDonation: "2024-03-05",
-  //   },
-  // ];
-  const topDonors = donors
-  .map(donation => ({
-    ...donation,
-    totalAmount: donation.donation.reduce((sum, d) => sum + Number(d.amount), 0) // Ensure the amount is a number
-  }))
-  .sort((a, b) => b.totalAmount - a.totalAmount) // Sort by total amount in descending order
-  .slice(0, 4); // Get top 4 donors
-
   return (
     <Container fluid>
       <Row>
-        {/* Sidebar */}
-        {/* <Col md={2} className="bg-light sidebar py-4">
-          <SideBar />
-        </Col> */}
-
-        {/* Main Content */}
         <Col md={10} className="p-4">
+          {/* Summary Section */}
+          <Row className="mb-4">
+            <Col md={6}>
+              <Card className="text-center">
+                <Card.Body>
+                  <h5>Total Donations Received</h5>
+                  <h2>${totalDonations.toLocaleString()}</h2>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={6}>
+              <Card className="text-center">
+                <Card.Body>
+                  <h5>Top Donor</h5>
+                  {topDonor ? (
+                    <p><strong>User:</strong> {topDonor.user} <br /><strong>Amount:</strong> ${topDonor.amount.toLocaleString()}</p>
+                  ) : (
+                    <p>No donations found</p>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+
           {/* Donation Stats Section */}
           <Row className="mb-4">
             <Col md={8}>
@@ -216,56 +198,21 @@ console.log(recentDonors)
                   <Table striped bordered hover responsive>
                     <thead>
                       <tr>
-                        <th>Donor</th>
-                        <th>Amount</th>
-                        <th>City</th>
-                        <th>Date</th>
+                        <th>Author</th>
+                        <th>Title</th>
+                        <th>Donation Goal</th>
+                        <th>Donation Received</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {donors.slice(-4).reverse().map((donation) => (
+                      {donations.slice(-4).reverse().map((donation) => (
                         <tr key={donation._id}>
-                          <td>{donation.firstName}{donation.lastName}</td>
-                          {/* <td>{donation.amount}</td> */}
-                         {donation.donation.map((donation)=>(
-                           <td key={donation._id}>{donation.amount}</td>
-                         ))}
-                          <td>{donation.city}</td>
-                          <td>{donation.updatedAt}</td>
+                          <td>{donation.author}</td>
+                          <td>{donation.title || "N/A"}</td>
+                          <td>${donation.donationGoal.toLocaleString()}</td>
+                          <td>${donation.donationReceived.toLocaleString()}</td>
                         </tr>
                       ))}
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Top Donors Section */}
-      
-          <Row className="mb-4">
-            <Col>
-              <Card>
-                <Card.Body>
-                  <h5>Top Donners</h5>
-                  <Table striped bordered hover responsive>
-                    <thead>
-                      <tr>
-                        <th>Donor</th>
-                        <th>Amount</th>
-                        <th>City</th>
-                        <th>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                    {topDonors.map((donor) => (
-          <tr key={donor._id}>
-            <td>{donor.firstName} {donor.lastName}</td>
-            <td>{donor.totalAmount}</td>
-            <td>{donor.city}</td>
-            <td>{donor.updatedAt}</td>
-          </tr>
-        ))}
                     </tbody>
                   </Table>
                 </Card.Body>

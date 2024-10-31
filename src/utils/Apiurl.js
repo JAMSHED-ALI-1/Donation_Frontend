@@ -1,0 +1,1 @@
+export const BASE_URL="https://donation-backend-app.vercel.app/api/"

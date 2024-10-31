@@ -1,14 +1,16 @@
-import React, { useState } from "react";
 import axios from "axios";
+import React, { useState } from "react";
+import { BASE_URL } from "../utils/Apiurl";
+import { Link, useNavigate } from "react-router-dom";
 
 const SignUp = ({ buttonText = "Sign Up" }) => {
-  // Initial state for form inputs
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     password: "",
   });
 
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
@@ -24,21 +26,27 @@ const SignUp = ({ buttonText = "Sign Up" }) => {
   // Handle form submission
   const handleFormSubmit = async (event) => {
     event.preventDefault();
-    setError(null); // Reset any previous errors
-    setSuccessMessage(null); // Reset any previous success message
+    setError(null); // Clear any previous error
+    setSuccessMessage(null); // Clear previous success message
+    setLoading(true); // Start loading
 
     try {
-      const response = await axios.post("http://localhost:3000/api/users/", formState, {
+      const res = await axios.post(`${BASE_URL}users/`, formState, {
         headers: {
           "Content-Type": "application/json",
         },
       });
-
-      // Set success message
-      setSuccessMessage("Sign up successful! You can now go back to the homepage.");
-    } catch (e) {
-      // Handle errors
-      setError(e.response?.data?.message || e.message || "Something went wrong during sign up.");
+console.log(res)
+      setSuccessMessage("Sign up successful! Welcome to the platform.");
+      setFormState({ name: "", email: "", password: "" }); // Reset form
+    } catch (error) {
+      if (error.response) {
+        setError(error.response.data.message || "An error occurred during sign up.");
+      } else {
+        setError("Network Error. Please check your connection and try again.");
+      }
+    } finally {
+      setLoading(false); // Stop loading
     }
   };
 
@@ -114,10 +122,26 @@ const SignUp = ({ buttonText = "Sign Up" }) => {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-primary w-100">
-                  {buttonText}
+                <button
+                  type="submit"
+                  className="btn btn-primary w-100"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Signing Up...
+                    </span>
+                  ) : (
+                    buttonText
+                  )}
                 </button>
               </form>
+              <p className="text-center mt-3">
+                  <small className="text-muted">
+                    If You have an account? <Link to="/SignIn">Sign In</Link>.
+                  </small>
+                </p>
             </div>
           </div>
         </div>

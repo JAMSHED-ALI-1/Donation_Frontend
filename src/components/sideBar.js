@@ -20,7 +20,18 @@ const SideBar = () => {
               </Button>
             </Link>
             <Accordion>
-              <Accordion.Item eventKey="0">
+            <Accordion.Item eventKey="0">
+                <Accordion.Header>Campaigns</Accordion.Header>
+                <Accordion.Body>
+                  <Link to="/CampaignCard" className="text-decoration-none text-dark d-block mb-2">
+                    Compain Overview
+                  </Link>
+                  <Link to="/NewStudent" className="text-decoration-none text-dark d-block">
+                   New Post Campaign
+                  </Link>
+                </Accordion.Body>
+              </Accordion.Item>
+              <Accordion.Item eventKey="1">
                 <Accordion.Header>Donations</Accordion.Header>
                 <Accordion.Body>
                   <Link to="/DonarCard" className="text-decoration-none text-dark d-block mb-2">
@@ -31,7 +42,7 @@ const SideBar = () => {
                   </Link>
                 </Accordion.Body>
               </Accordion.Item>
-              <Accordion.Item eventKey="1">
+              <Accordion.Item eventKey="2">
                 <Accordion.Header>Donors</Accordion.Header>
                 <Accordion.Body>
                   <Link to="/Donor" className="text-decoration-none text-dark d-block mb-2">
@@ -39,17 +50,6 @@ const SideBar = () => {
                   </Link>
                   {/* <Link to="/donors/new" className="text-decoration-none text-dark d-block">
                     New Donor
-                  </Link> */}
-                </Accordion.Body>
-              </Accordion.Item>
-              <Accordion.Item eventKey="2">
-                <Accordion.Header>Campaigns</Accordion.Header>
-                <Accordion.Body>
-                  <Link to="/CampaignCard" className="text-decoration-none text-dark d-block mb-2">
-                    Campaign Overview
-                  </Link>
-                  {/* <Link to="/NewStudent" className="text-decoration-none text-dark d-block">
-                    New Campaign
                   </Link> */}
                 </Accordion.Body>
               </Accordion.Item>
